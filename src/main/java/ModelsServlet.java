@@ -38,26 +38,48 @@ public class ModelsServlet extends HttpServlet {
 			DataSource ds = (DataSource) context.lookup("java:comp/env/jdbc/classicmodels");
 			con = ds.getConnection();
 			stm = con.createStatement();
-			rs = stm.executeQuery("select * from products where productline='" +
-					request.getParameter("productline") + "'");
-			List<Product> productos = new ArrayList<>();
-			while (rs.next()) {
-				productos.add(new Product(
-						rs.getString(1), // productCode
-						rs.getString(2), // productName
-						rs.getString(3), // productLine
-						rs.getString(4), // productScale
-						rs.getString(5), // productVendor
-						rs.getString(6), // productDescription
-						rs.getShort(7),  // quantityInStock
-						rs.getFloat(8),  // buyPrice
-						rs.getFloat(9)   // MSRP
-						));
+			String parameter;
+			if ((parameter = request.getParameter("productline")) != null) {
+				rs = stm.executeQuery("select * from products where productline='" +
+						request.getParameter("productline") + "'");
+				
+				// si no devuelve ninguna fila
+					// response.setStatus(HttpServletResponse.SC_NOT_FOUND);
+				// en caso contrario generar la respuesta
+				
+				List<Product> productos = new ArrayList<>();
+				while (rs.next()) {
+					productos.add(new Product(
+							rs.getString(1), // productCode
+							rs.getString(2), // productName
+							rs.getString(3), // productLine
+							rs.getString(4), // productScale
+							rs.getString(5), // productVendor
+							rs.getString(6), // productDescription
+							rs.getShort(7),  // quantityInStock
+							rs.getFloat(8),  // buyPrice
+							rs.getFloat(9)   // MSRP
+							));
+				}
+				Gson gson = new Gson();
+				out.println(gson.toJson(productos));
+			} 
+			else if ((parameter = request.getParameter("vendor")) != null) {
+				
 			}
-			Gson gson = new Gson();
-			out.println(gson.toJson(productos));
+			else if ((parameter = request.getParameter("productline")) != null) {
+				
+			}
+			else if (request.getParameterMap().size() == 0) {
+				
+			}
+			else
+				response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+			
+			
 		} catch (NamingException | SQLException e) {
 			e.printStackTrace();
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
 		} finally {
 			if (rs != null) {
 				try {
