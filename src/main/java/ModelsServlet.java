@@ -1,4 +1,5 @@
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.sql.Connection;
@@ -7,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.naming.Context;
 import javax.naming.InitialContext;
@@ -14,6 +16,7 @@ import javax.naming.NamingException;
 import javax.sql.DataSource;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonSyntaxException;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.annotation.WebServlet;
@@ -38,8 +41,7 @@ public class ModelsServlet extends HttpServlet {
 			DataSource ds = (DataSource) context.lookup("java:comp/env/jdbc/classicmodels");
 			con = ds.getConnection();
 			stm = con.createStatement();
-			String parameter;
-			if ((parameter = request.getParameter("productline")) != null) {
+			if (request.getParameter("productline") != null) {
 				rs = stm.executeQuery("select * from products where productline='" +
 						request.getParameter("productline") + "'");
 				
@@ -64,10 +66,10 @@ public class ModelsServlet extends HttpServlet {
 				Gson gson = new Gson();
 				out.println(gson.toJson(productos));
 			} 
-			else if ((parameter = request.getParameter("vendor")) != null) {
+			else if (request.getParameter("vendor") != null) {
 				
 			}
-			else if ((parameter = request.getParameter("productline")) != null) {
+			else if (request.getParameter("productline") != null) {
 				
 			}
 			else if (request.getParameterMap().size() == 0) {
@@ -105,6 +107,32 @@ public class ModelsServlet extends HttpServlet {
 	@Override
 	protected void doPost(HttpServletRequest request, HttpServletResponse response)
 			throws ServletException, IOException {
-		doGet(request, response);
+		BufferedReader in = request.getReader();
+		Connection con = null;
+		Statement stm = null;
+		String json = in.lines().collect(Collectors.joining());
+		Gson gson = new Gson();
+		try {
+			Product p = gson.fromJson(json, Product.class);
+			Context context = new InitialContext();
+			DataSource ds = (DataSource) context.lookup("java:comp/env/jdbc/classicmodels");
+			con = ds.getConnection();
+			stm = con.createStatement();
+			String sql = "insert into products values ('" +
+					p.getProductCode() + "', '" +
+					p.getProductName() + "', '" +
+					p.getProductLine() + "', '" +
+					p.getProductScale() + "', '" +
+					p.getProductVendor() + "', '" +
+					p.getProductDescription() + "', " +
+					p.getQuantityInStock() + ", " +
+					p.getBuyPrice() + ", " +
+					p.getMSRP() + ")";
+			stm.executeUpdate(sql);
+		} catch (JsonSyntaxException e) {
+			response.setStatus(HttpServletResponse.SC_BAD_REQUEST);
+		} catch (SQLException | NamingException e) {
+			response.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+		}
 	}
 }
